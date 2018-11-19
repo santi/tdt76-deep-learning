@@ -8,9 +8,7 @@ import pypianoroll as pproll
 import sys
 import IPython
 import fluidsynth
-import torch
-### need also to install fluidsynth to be able to synthesize midi file to audio (pip install fluidsynth)
-
+# import torch
 
 
 
@@ -140,6 +138,7 @@ def visualize_piano_roll(pianoroll_matrix,fs=5):
     """ input: piano roll matrix with shape (number of notes, time steps)
         effect: generates a nice graph with the piano roll visualization
     """
+    print(pianoroll_matrix.shape)
     if(pianoroll_matrix.shape[0]==128):
         pianoroll_matrix=pianoroll_matrix.T.astype(float)
     track = pproll.Track(pianoroll=pianoroll_matrix, program=0, is_drum=False, name='piano roll')   
@@ -166,7 +165,7 @@ def generate_round(model,tag,n,k=1,init=None):
         k = init.shape[0]
     res = init
     hidden = None
-    for i in xrange(n//k):
+    for i in range(n//k):
         init,hidden = model.forward(init,tag,hidden)
         #init = torch.round(torch.exp(init))
         init = torch.round(init/torch.max(init))

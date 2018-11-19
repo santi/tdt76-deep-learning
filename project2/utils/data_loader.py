@@ -3,6 +3,8 @@ import re
 import sys
 import tensorflow as tf
 
+from .datapreparation import visualize_piano_roll, load_all_dataset
+
 import pandas as pd
 import pickle
 from utils.constants import CONST
@@ -11,27 +13,24 @@ import numpy as np
 
 
 class Reader():
-    def __init__(self, sess, args, logger):
-        self.sess = sess
+    def __init__(self, args, sess, logger):
         self.args = args
+        self.sess = sess
         self.logger = logger
 
         self.logger.log('============Preparing datasets============')
 
-        """
-        self.training_dataset, self.training_labels = self.process_dataset(
-            self.args.training_data, 'data/skipthoughts/train_encodings.pkl')
-        if args.action == 'train':
-            self.validation_dataset, self.validation_labels, self.validation_encodings = self.process_dataset(
-                self.args.validation_data, 'data/skipthoughts/validation_encodings.pkl', is_validation=True)
-        elif args.action == 'predict':
-            self.test_dataset, self.test_labels, self.test_encodings = self.process_dataset(
-                self.args.prediction_data, 'data/skipthoughts/prediction_encodings.pkl', is_validation=True, is_prediction=True)
-        """
+        piano_roll = load_all_dataset('datasets/training/piano_roll_fs1_subset/')
+        print(piano_roll)
+        piano_roll = piano_roll[0]
+        print(piano_roll.shape)
+        piano_roll = tf.data.Dataset.from_tensor_slices(piano_roll)
+        self.dataset = tf.data.Dataset.batch(piano_roll, self.args.batch_size, drop_remainder=True)
+
+        print(self.dataset)
         self.logger.log('============Datasets prepared============')
 
     def process_dataset(self, path, encodings_path, shuffle=False, is_validation=False, is_prediction=False):
-        """
         dataset, labels = self._load_data(path, is_prediction)
         print(dataset)
         index = tf.data.Dataset.from_tensor_slices([i for i in range(len(dataset))])
@@ -63,18 +62,17 @@ class Reader():
             dataset = dataset.apply(
                 tf.contrib.data.batch_and_drop_remainder(self.args.batch_size))
         return dataset, labels, encodings
-        """
 
     def get_encodings(self, dataset, filepath):
         if os.path.isfile(filepath):
-            self.logger.log(f'Found skip thought embeddings at {filepath}.')
+            self.debugger.debug(f'Found skip thought embeddings at {filepath}.')
             return pickle.load(open(filepath, 'rb'))
 
         np_dataset = np.array(dataset).reshape((-1))
         encodings = self.encoder.encode(np_dataset)
 
         encodings = np.array(encodings).reshape((-1, 5, 2400))
-        self.logger.log(f'Saved skip thought file to {filepath}')
+        self.debugger.debug(f'Saved skip thought file to {filepath}')
         pickle.dump(encodings, open(filepath, 'wb'), protocol=4)
         return encodings
 
@@ -98,7 +96,7 @@ class Reader():
         """
         Applies all transformations to preprocess data inplace
         """
-        self.logger.log('Starting data preprocessing...')
+        self.debugger.debug('Starting data preprocessing...')
 
         dataset = self._parse_sentence(dataset)
 
@@ -113,7 +111,7 @@ class Reader():
         dataset = self._pad_sentences(dataset)
         dataset = self._map_to_indices(dataset)
 
-        self.logger.log('Data preprocessing finished!')
+        self.debugger.debug('Data preprocessing finished!')
         return dataset
 
     def _get_vocabulary(self, corpus):
@@ -122,17 +120,17 @@ class Reader():
         :param corpus: the dataset used to create the vocabulary
         :return: the dictionary with words and counts
         """
-        self.logger.log('Creating word_to_index from training corpus...')
+        self.debugger.debug('Creating word_to_index from training corpus...')
 
         if os.path.isfile(CONST['VOCAB_FILEPATH']):
-            self.logger.log(f'Found word_to_index vocabulary at {CONST["VOCAB_FILEPATH"]}.')
+            self.debugger.debug(f'Found word_to_index vocabulary at {CONST["VOCAB_FILEPATH"]}.')
             return pickle.load(open(CONST['VOCAB_FILEPATH'], 'rb'))
 
         elif self.args.action != 'train':
             raise ImportError(
                 'No vocabulary file found. Please run training first to generate a vocab')
 
-        self.logger.log(f'No vocabulary file found. Creating vocabulary from training data.')
+        self.debugger.debug(f'No vocabulary file found. Creating vocabulary from training data.')
         corpus = np.reshape(corpus, -1)
         corpus = ' '.join(corpus)
 
@@ -155,7 +153,7 @@ class Reader():
         for index, key_value in enumerate(vocab_list):
             word_to_index[key_value[0]] = index
 
-        self.logger.log(f'Saved vocabulary file to {CONST["VOCAB_FILEPATH"]}')
+        self.debugger.debug(f'Saved vocabulary file to {CONST["VOCAB_FILEPATH"]}')
         pickle.dump(word_to_index, open(CONST['VOCAB_FILEPATH'], 'wb'))
         return word_to_index
 
@@ -179,9 +177,9 @@ class Reader():
     #     return self._transform_data(padded_dataset, remove_extra_spaces)
 
     def _load_data(self, filepath, is_test=False):
-        self.logger.log('Loading data from: ' + filepath)
+        self.debugger.debug('Loading data from: ' + filepath)
         dataset, labels = self._load_csv(filepath, is_test)
-        self.logger.log('Data loaded.')
+        self.debugger.debug('Data loaded.')
         return dataset, labels
 
     def _load_csv(self, filepath, is_test=False):
@@ -205,10 +203,10 @@ class Reader():
     #     """
 
     #     if os.path.isfile(filepath):
-    #         self.logger.log(f'Found SpaCy preprocessed data file at {filepath}')
+    #         self.debugger.debug(f'Found SpaCy preprocessed data file at {filepath}')
     #         return np.load(filepath)  # we already have the preprocessed data
 
-    #     self.logger.log(f'No preprocessed data file found: {filepath}')
+    #     self.debugger.debug(f'No preprocessed data file found: {filepath}')
 
     #     def replace_named_entities(s):
     #         doc = self.nlp(str(s))

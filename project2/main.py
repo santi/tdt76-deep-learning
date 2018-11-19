@@ -6,7 +6,7 @@ from utils.argparser import parse_args
 from utils.dirs import create_dirs
 
 from utils.logger import Logger
-from models.model import Model
+from models.lstm import VanillaLSTM as Model
 from utils.data_loader import Reader
 from actions.train import Trainer
 from actions.predict import Predictor
@@ -20,7 +20,15 @@ def main():
 
     logger = Logger(sess, args)
     model = Model(args, logger)
-    reader = Reader(sess, args, logger)
+
+
+    sess.run(tf.global_variables_initializer())
+    writer = tf.summary.FileWriter("testing/graph", sess.graph)
+    writer.close()
+
+
+
+    reader = Reader(args, sess, logger)
 
     if args.action == 'train':
         trainer = Trainer(sess, model, reader, args, logger)
