@@ -10,6 +10,7 @@ from models.lstm import VanillaLSTM as Model
 from utils.data_loader import Reader
 from actions.train import Trainer
 from actions.predict import Predictor
+import utils.datapreparation as dataprep
 
 
 def main():
@@ -27,6 +28,10 @@ def main():
     writer.close()
 
 
+    #dataset = (dataprep.load_all_dataset("data/training/piano_roll_fs5/"))
+    #dataprep.embed_play_v1(dataset[0])
+    #dataprep.piano_roll_to_mid_file(dataset[0]*100, "test")
+
 
     reader = Reader(args, sess, logger)
 
@@ -34,9 +39,8 @@ def main():
         trainer = Trainer(sess, model, reader, args, logger)
         trainer.train()
     else:
-        predictor = Predictor(sess, model, reader, args)
+        predictor = Predictor(sess, model, reader, args, logger)
         predictor.predict()
 
 
-if __name__ == '__main__':
-    main()
+main()

@@ -6,12 +6,12 @@ def parse_args():
 
     parser.add_argument('--batch_size',
                         type=int,
-                        default=64,
+                        default=32, # TODO: 64
                         help='specify batch size')
 
     parser.add_argument('--epochs',
                         type=int,
-                        default=100,
+                        default=100000,
                         help='number of epochs to run')
 
     parser.add_argument('--checkpoint_dir',

@@ -1,14 +1,16 @@
+import os
 import sys
-
+import tensorflow as tf
 
 class Logger:
     def __init__(self, sess, args):
         self.sess = sess
-        self.active = args.debug
+        self.args = args
+        self.summary_writer = None
 
 
     def log(self, msg):
-        if self.active:
+        if self.args.debug:
             sys.stdout.write('\033[1;34m')
             print(msg)
             sys.stdout.write('\033[0;0m')
