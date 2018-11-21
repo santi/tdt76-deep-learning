@@ -6,11 +6,10 @@ from utils.argparser import parse_args
 from utils.dirs import create_dirs
 
 from utils.logger import Logger
-from models.lstm import VanillaLSTM as Model
 from utils.data_loader import Reader
 from actions.train import Trainer
 from actions.predict import Predictor
-import utils.datapreparation as dataprep
+from models.lstm import VanillaLSTM as Model
 
 
 def main():
@@ -21,18 +20,6 @@ def main():
 
     logger = Logger(sess, args)
     model = Model(args, logger)
-
-
-    sess.run(tf.global_variables_initializer())
-    writer = tf.summary.FileWriter("testing/graph", sess.graph)
-    writer.close()
-
-
-    #dataset = (dataprep.load_all_dataset("data/training/piano_roll_fs5/"))
-    #dataprep.embed_play_v1(dataset[0])
-    #dataprep.piano_roll_to_mid_file(dataset[0]*100, "test")
-
-
     reader = Reader(args, sess, logger)
 
     if args.action == 'train':

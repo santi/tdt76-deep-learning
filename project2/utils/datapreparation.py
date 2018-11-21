@@ -138,8 +138,10 @@ def visualize_piano_roll(pianoroll_matrix,fs=5):
     """ input: piano roll matrix with shape (number of notes, time steps)
         effect: generates a nice graph with the piano roll visualization
     """
+    pianoroll_matrix = pianoroll_matrix.astype(float)
     if(pianoroll_matrix.shape[0]==128):
-        pianoroll_matrix=pianoroll_matrix.T.astype(float)
+        print('flipping matrix')
+        pianoroll_matrix = pianoroll_matrix.T
     track = pproll.Track(pianoroll=pianoroll_matrix, program=0, is_drum=False, name='piano roll')   
     # Plot the piano-roll
     fig, ax = track.plot(beat_resolution=fs)

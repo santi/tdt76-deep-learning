@@ -3,31 +3,7 @@ from .action import Action
 
 import time
 import os
-import psutil
 
-
-def elapsed_since(start):
-    return time.strftime("%H:%M:%S", time.gmtime(time.time() - start))
-
-
-def get_process_memory():
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss
-
-
-def profile(func):
-    def wrapper(*args, **kwargs):
-        mem_before = get_process_memory()
-        start = time.time()
-        result = func(*args, **kwargs)
-        elapsed_time = elapsed_since(start)
-        mem_after = get_process_memory()
-        print("{}: memory before: {:,}, after: {:,}, consumed: {:,}; exec time: {}".format(
-            func.__name__,
-            mem_before, mem_after, mem_after - mem_before,
-            elapsed_time))
-        return result
-    return wrapper
 
 class Trainer(Action):
     def __init__(self, sess, model, reader, args, logger):
@@ -38,7 +14,10 @@ class Trainer(Action):
         #self.train_step = self.get_train_step()
         #self.best_validation = 0.0
         #self.load_model()
+
+        self.sess.run(tf.global_variables_initializer())
         self.logger.log('============Trainer initialized============')
+
 
     def train(self):
         self.logger.log('============Starting training============')
@@ -50,26 +29,27 @@ class Trainer(Action):
         
         self.logger.log('============Training finished============')
 
-    @profile
+
     def train_epoch(self, epoch):
         batch_features, batch_labels = self.reader.get_iterator()
         for i in range(len(batch_features)):
             loss, global_step, summaries, _, logits = self.sess.run(
-                [self.model.loss, self.model.global_step_tensor, self.model.summaries, self.model.train_step, self.model.logits],
+                [
+                    self.model.loss,
+                    self.model.global_step_tensor,
+                    self.model.summaries,
+                    self.model.train_step,
+                    self.model.logits,
+                ],
                 feed_dict={
                     self.model.X: batch_features[i],
                     self.model.Y: batch_labels[i],
-                    self.model.training: True,
                 })
-
-            #self.print_note(logits[0][0][30:70])
-            #self.print_note(labels[0][0][30:70])
-            self.logger.log(
-                f'Epoch: {epoch}. Global step {global_step}. Loss: {loss}.')
-            #if global_step % 100 == 0:
-                #self.logger.summarize(summaries, global_step)
-            #    self.validate(global_step)
-
+            if global_step % 100 == 0:
+                self.print_note(logits[0][0][50:90])
+                self.print_note(batch_labels[i][0][0][50:90])
+                self.logger.log(
+                    f'Epoch: {epoch}. Global step {global_step}. Loss: {loss}.')
         self.logger.summarize(summaries, global_step)
 
     # save function that saves the checkpoint in the path defined in the config file

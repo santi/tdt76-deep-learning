@@ -14,15 +14,12 @@ class VanillaLSTM(Model):
 
     def build_model(self):
         self.logger.log('==============Building model==============')
-        # create word embeddings for the words in the sentences.
-        self.training = tf.placeholder_with_default(False, shape=(), name='training')
 
-        self.X = tf.placeholder(tf.float32, [self.batch_size, CONST['SEQUENCE_LENGTH'], CONST['NOTE_LENGTH']], name='X')
-
+        self.X = tf.placeholder(tf.float32, [None, CONST['SEQUENCE_LENGTH'], CONST['NOTE_LENGTH']], name='X')
 
         with tf.variable_scope('lstm_cell'):
             lstm_cell = tf.nn.rnn_cell.LSTMCell(CONST['LSTM_SIZE'])
-            initial_state = lstm_cell.zero_state(self.batch_size, dtype=tf.float32)
+            initial_state = lstm_cell.zero_state(self.args.batch_size, dtype=tf.float32)
 
         with tf.variable_scope('LSTM'):
             outputs, _ = tf.nn.dynamic_rnn(
@@ -34,16 +31,15 @@ class VanillaLSTM(Model):
         with tf.variable_scope('dense'):
             self.logits = tf.layers.dense(
                 outputs, units=CONST['NOTE_LENGTH'], activation=tf.nn.sigmoid)
-            print(self.logits.shape)
         
         self.Y = tf.placeholder(
             tf.float32,
-            shape=(self.batch_size, CONST['SEQUENCE_LENGTH'], CONST['NOTE_LENGTH']),
+            shape=(None, CONST['SEQUENCE_LENGTH'], CONST['NOTE_LENGTH']),
             name='Y')
         
         with tf.variable_scope('loss'):
-            self.loss = tf.reduce_sum(tf.nn.weighted_cross_entropy_with_logits(
-                logits=self.logits, targets=self.Y, pos_weight=1.0/50)) / (self.args.batch_size * CONST['SEQUENCE_LENGTH'] * CONST['NOTE_LENGTH'])
+            self.loss = tf.losses.mean_squared_error(
+                self.Y, self.logits, weights=100)
             self.loss_summary = tf.summary.scalar('sigmoid_mean_loss', self.loss)
         """
         self.probabilities = tf.nn.softmax(self.logits)

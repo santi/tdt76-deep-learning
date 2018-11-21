@@ -21,12 +21,11 @@ class Reader():
         self.logger.log('============Preparing datasets============')
 
         piano_rolls = load_all_dataset('data/training/piano_roll_fs1/')
-        #print(piano_rolls)
-        #for roll in piano_rolls:
-        #    print(roll.T.shape)
 
+        #test_roll = piano_rolls[0].T
+        #visualize_piano_roll(test_roll)
+        #print(test_roll[1])
 
-        notes = []
         features_dataset = []
         labels_dataset = []
         for roll in piano_rolls:
@@ -51,7 +50,6 @@ class Reader():
 
         self.training_data = (self.features_array, self.labels_array)
 
-        #print(self.training_dataset)
         self.logger.log('============Datasets prepared============')
 
 

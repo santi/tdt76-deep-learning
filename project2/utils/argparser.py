@@ -11,18 +11,18 @@ def parse_args():
 
     parser.add_argument('--epochs',
                         type=int,
-                        default=100000,
+                        default=1000,
                         help='number of epochs to run')
 
     parser.add_argument('--checkpoint_dir',
                         type=str,
                         default='checkpoints/',
-                        help='checkpoint directory')
+                        help='model checkpoint directory')
 
     parser.add_argument('--log_dir',
                         type=str,
                         default='log/',
-                        help='directory of logs')
+                        help='log summary directory')
 
     parser.add_argument('--action',
                         type=str,
