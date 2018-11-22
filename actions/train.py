@@ -4,6 +4,7 @@ import numpy as np
 import time
 import sys
 import os
+from utils.constants import CONST
 
 
 class Trainer(Action):
@@ -21,7 +22,6 @@ class Trainer(Action):
         for cur_epoch in range(self.args.epochs):
             self.train_epoch(cur_epoch)
             self.validate()
-            self.save_model()
             self.sess.run(self.model.increment_cur_epoch_tensor)
         
         self.logger.log('============Training finished============')
@@ -29,12 +29,15 @@ class Trainer(Action):
 
     def train_epoch(self, epoch):
         batch_features, batch_labels = self.reader.get_iterator()
+        initial_state = np.zeros((self.args.batch_size, CONST['LSTM_SIZE']))
         for i in range(len(batch_features)):
             self.sess.run(
                 self.model.train_step,
                 feed_dict={
                     self.model.X: batch_features[i],
                     self.model.Y: batch_labels[i],
+                    self.model.initial_hidden_state: initial_state,
+                    self.model.initial_cell_state: initial_state,
                 })
 
 
@@ -62,12 +65,16 @@ class Trainer(Action):
     def validate(self):
         total_loss = 0.
         batch_features, batch_labels = self.reader.get_iterator()
+
+        initial_state = np.zeros((self.args.batch_size, CONST['LSTM_SIZE']))
         for i in range(len(batch_features)):
             total_loss += self.sess.run(
                 self.model.loss,
                 feed_dict={
                     self.model.X: batch_features[i],
                     self.model.Y: batch_labels[i],
+                    self.model.initial_hidden_state: initial_state,
+                    self.model.initial_cell_state: initial_state,
                 })
 
         if total_loss < self.best_validation:
@@ -85,6 +92,8 @@ class Trainer(Action):
                 feed_dict={
                     self.model.X: batch_features[-1],
                     self.model.Y: batch_labels[-1],
+                    self.model.initial_hidden_state: initial_state,
+                    self.model.initial_cell_state: initial_state,
                 })
         self.print_note(logits[0][0][50:90])
         self.print_note(batch_labels[-1][0][0][50:90])

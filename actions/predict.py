@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 import os
 from .action import Action
+from utils.constants import CONST
+from utils.datapreparation import visualize_piano_roll, load_all_dataset
 
 
 class Predictor(Action):
@@ -11,34 +13,66 @@ class Predictor(Action):
         self.load_model()
 
     def predict(self):
-        next_batch = self.reader.get_iterator(dataset='predict')
-        while True:
-            try:
-                sentences, indices = self.sess.run(next_batch)
-                print(sentences)
-                print(indices)
-                probabilities = self.sess.run(
-                    [self.model.probabilities],
+        self.logger.log('Start generating songs...')
+        features = self.reader.get_iterator(dataset='prediction')
+        print(f"predict feature shape: {features.shape}")
+        predicted_songs = []
+        for roll in features:
+            print(f"roll shape: {roll.shape}")
+            counter = 0
+            notes = []
+            cell_state = np.zeros((1, CONST['LSTM_SIZE']))
+            hidden_state = np.zeros((1, CONST['LSTM_SIZE']))
+            state = (cell_state, hidden_state)
+
+            first = True
+            for note in roll:
+                print(f"note shape: {note.shape}")
+                reshaped_note = np.reshape(note, (1, 1, CONST['NOTE_LENGTH']))
+                print(f"note reshaped: {reshaped_note.shape}")
+                if first:
+                    first = False
+                    logits, state = self.sess.run(
+                        [self.model.outputs,
+                        self.model.output_state],
+                        feed_dict={
+                            self.model.X: reshaped_note,
+                            self.model.initial_hidden_state: state[0],
+                            self.model.initial_cell_state: state[1],
+                        })
+                    print(f"note output shape: {note.shape}")
+                    notes.append(note)
+                else:
+                    logits, state = self.sess.run(
+                        [self.model.outputs,
+                        self.model.output_state],
+                        feed_dict={
+                            self.model.X: reshaped_note,
+                            self.model.initial_cell_state: state.c,
+                            self.model.initial_hidden_state: state.h,
+                        })
+                    print(note.shape)
+                    notes.append(note)
+
+            
+            while counter < 20: # TODO: change to 100
+                note = np.reshape(notes[-1], (1, 1, CONST['NOTE_LENGTH']))
+                logits, state = self.sess.run(
+                    [self.model.outputs,
+                    self.model.output_state],
                     feed_dict={
-                        self.model.sentences: sentences,
-                        self.model.training: False,
-                        self.model.encodings: [self.reader.test_encodings[index]
-                                               for index in indices]
+                        self.model.X: note,
+                        self.model.initial_cell_state: state.c,
+                        self.model.initial_hidden_state: state.h,
                     })
-                probabilities = probabilities[0]  # np.squeeze(probabilities, axis=1)
-                print(sentences.shape)
-                print(probabilities)
-                print(probabilities.shape)
-                assert len(probabilities) == 2
-                prob1 = probabilities[0][1]
-                prob2 = probabilities[1][1]
-                label = 1 if prob1 > prob2 else 2
-
-                with open('data/prediction.csv', 'a') as f:
-                    np.savetxt(f, [label], delimiter=',', fmt='%i')
-
-            except tf.errors.OutOfRangeError:
-                break
+                notes.append(np.reshape(logits, (128,)))
+                counter += 1
+            
+            notes = np.array(notes)
+            print(f'output notes shape: {notes.shape}')
+            for note in notes:
+                print(note[50:90])
+            visualize_piano_roll(notes)
 
     def load_model(self):
         latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.args.checkpoint_dir, self.args.model_name))

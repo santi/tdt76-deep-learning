@@ -44,7 +44,7 @@ def parse_args():
 
     parser.add_argument('--prediction_data',
                         type=str,
-                        default='data/test_nlu18_split.csv')
+                        default='data/training/piano_roll_fs1_subset/')
 
     parser.add_argument('--debug',
                         type=bool,

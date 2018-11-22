@@ -20,7 +20,7 @@ class Reader():
         self.logger.log('============Preparing datasets============')
 
         training_data = self._load_data(self.args.training_data)
-        #prediction_data = self._load_data(self.args.prediction_data)
+        prediction_data = self._load_data(self.args.prediction_data)
 
         #test_roll = piano_rolls[0].T
         #visualize_piano_roll(test_roll)
@@ -44,8 +44,13 @@ class Reader():
         self.labels_dataset = np.array(self.labels_dataset)
 
         # prediction data
-        #for roll in prediction_data:
-        #    print(roll.shape)
+        prediction_features = []
+        for roll in prediction_data:
+            features = roll.T[:5]
+            prediction_features.append(features)
+        
+        self.prediction_features = np.array(prediction_features)
+
 
         self.logger.log('============Datasets prepared============')
 
@@ -53,12 +58,10 @@ class Reader():
     def get_iterator(self, dataset='training'):
         if dataset == 'training':
             return self._shuffle_and_batch(self.features_dataset, self.labels_dataset)
+        elif dataset == 'prediction':
+            return self.prediction_features
         else:
-            raise NotImplementedError('Must get training data')
-        #elif dataset == 'validation':
-        #    return self.validation_dataset.make_one_shot_iterator()
-        #else:
-        #    return self.test_dataset.make_one_shot_iterator().get_next()
+            raise NotImplementedError('must get trainign or prediction data')
 
 
     def _shuffle_and_batch(self, a, b):

@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.contrib.layers import xavier_initializer
 
 from .model import Model
 from utils.constants import CONST
@@ -9,36 +10,66 @@ from utils.constants import CONST
 class VanillaLSTM(Model):
     def __init__(self, args, logger):
         super().__init__(args, logger)
+
+        self.batch_size = self.args.batch_size
+        self.sequence_length = CONST['SEQUENCE_LENGTH']
+
+        if self.args.action == 'predict':
+            self.batch_size = 1
+            self.sequence_length = 1
+
         self.build_model()
 
     def build_model(self):
         self.logger.log('==============Building model==============')
 
-        self.X = tf.placeholder(tf.float32, [None, CONST['SEQUENCE_LENGTH'], CONST['NOTE_LENGTH']], name='X')
+        self.X = tf.placeholder(tf.float32, [
+            self.batch_size,
+            self.sequence_length,
+            CONST['NOTE_LENGTH']], name='X')
+
+        self.initial_hidden_state = tf.placeholder(
+            tf.float32, shape=[self.batch_size, CONST['LSTM_SIZE']], name='initial_hidden_state')
+        self.initial_cell_state = tf.placeholder(
+            tf.float32, shape=[self.batch_size, CONST['LSTM_SIZE']], name='initial_cell_state')
 
         with tf.variable_scope('lstm_cell'):
-            lstm_cell = tf.nn.rnn_cell.LSTMCell(CONST['LSTM_SIZE'])
-            initial_state = lstm_cell.zero_state(self.args.batch_size, dtype=tf.float32)
+            cell = tf.nn.rnn_cell.LSTMCell(num_units=CONST['LSTM_SIZE'])
+            initial_state = (self.initial_cell_state, self.initial_hidden_state)
 
-        with tf.variable_scope('LSTM'):
-            outputs, _ = tf.nn.dynamic_rnn(
-                lstm_cell,
-                inputs=self.X,
-                initial_state=initial_state,
-                dtype=tf.float32)
+        with tf.variable_scope('LSTM') as scope:
+            outputs = []
+            for i in range(self.sequence_length):
+                if i == 0:
+                    output, state = cell(inputs=self.X[:, i, :], state=initial_state)
+                else:
+                    scope.reuse_variables()
+                    output, state = cell(inputs=self.X[:, i, :], state=state)
+                outputs.append(output)
+            self.output_state = state
+            outputs = tf.stack(outputs, axis=1)
+            print(f"LSTM outputs: {outputs.shape}")
+
+
+        self.logits = tf.layers.dense(
+            inputs=outputs,
+            units=CONST['NOTE_LENGTH'],
+            name='dense')
+
+        print(f"logits: {self.logits.shape}")
+        self.outputs = tf.nn.sigmoid(self.logits)
         
-        with tf.variable_scope('dense'):
-            self.logits = tf.layers.dense(
-                outputs, units=CONST['NOTE_LENGTH'], activation=tf.nn.sigmoid)
         
         self.Y = tf.placeholder(
             tf.float32,
-            shape=(None, CONST['SEQUENCE_LENGTH'], CONST['NOTE_LENGTH']),
+            shape=(self.batch_size, self.sequence_length, CONST['NOTE_LENGTH']),
             name='Y')
+        
+        print(f"Y: {self.Y.shape}")
         
         with tf.variable_scope('loss'):
             self.loss = tf.losses.mean_squared_error(
-                self.Y, self.logits, weights=100)
+                self.Y, self.outputs, weights=100)
             self.loss_summary = tf.summary.scalar('sigmoid_mean_loss', self.loss)
         """
         self.probabilities = tf.nn.softmax(self.logits)
