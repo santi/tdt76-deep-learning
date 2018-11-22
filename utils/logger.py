@@ -42,6 +42,7 @@ class Logger:
         if not self.saver:
             self.saver = tf.train.Saver(max_to_keep=2)
         self.log(f"Loading model from {checkpoint_path}...")
+        #print(self.sess.graph.get_operations())
         self.saver.restore(self.sess, checkpoint_path)
-        global_step = self.sess.run(self.sess.graph.global_step_tensor)
+        global_step = self.sess.run(self.sess.graph.get_tensor_by_name('counters/global_step:0'))
         self.log(f"Model loaded. Global step: {global_step}")
