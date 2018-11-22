@@ -19,7 +19,8 @@ class Reader():
 
         self.logger.log('============Preparing datasets============')
 
-        piano_rolls = self._load_data(self.args.training_data)
+        training_data = self._load_data(self.args.training_data)
+        #prediction_data = self._load_data(self.args.prediction_data)
 
         #test_roll = piano_rolls[0].T
         #visualize_piano_roll(test_roll)
@@ -27,7 +28,7 @@ class Reader():
 
         self.features_dataset = []
         self.labels_dataset = []
-        for roll in piano_rolls:
+        for roll in training_data:
             features = roll.T
             labels = features[1:]
             labels = np.append(labels, [np.ones_like(labels[0])], axis=0)
@@ -41,6 +42,10 @@ class Reader():
 
         self.features_dataset = np.array(self.features_dataset)
         self.labels_dataset = np.array(self.labels_dataset)
+
+        # prediction data
+        #for roll in prediction_data:
+        #    print(roll.shape)
 
         self.logger.log('============Datasets prepared============')
 
@@ -59,10 +64,10 @@ class Reader():
     def _shuffle_and_batch(self, a, b):
         self._shuffle_in_unison(a, b)
 
-        features_array = self._batch(self.features_dataset)
-        labels_array = self._batch(self.labels_dataset)
+        batch_a = self._batch(a)
+        batch_b = self._batch(b)
 
-        return (features_array, labels_array)
+        return (batch_a, batch_b)
 
 
     def _shuffle_in_unison(self, a, b):

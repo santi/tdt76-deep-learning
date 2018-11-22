@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.contrib.layers import xavier_initializer
 
 from .model import Model
 from utils.constants import CONST

@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import os
 from .action import Action
 
 
@@ -7,7 +8,6 @@ class Predictor(Action):
     def __init__(self, sess, model, reader, args, logger):
         super().__init__(sess, model, reader, args, logger)
         
-        self.saver = tf.train.Saver()
         self.load_model()
 
     def predict(self):
@@ -41,11 +41,8 @@ class Predictor(Action):
                 break
 
     def load_model(self):
-        latest_checkpoint = tf.train.latest_checkpoint(self.args.checkpoint_dir)
+        latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.args.checkpoint_dir, self.args.model_name))
         if latest_checkpoint:
-            self.logger.log(f"Loading model from {latest_checkpoint}")
-            self.sess.run(tf.tables_initializer())
-            self.saver.restore(self.sess, latest_checkpoint)
-            self.logger.log("Model loaded")
+            self.logger.load_checkpoint(latest_checkpoint)
         else:
             raise NotImplementedError()

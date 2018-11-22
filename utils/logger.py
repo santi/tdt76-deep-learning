@@ -39,6 +39,8 @@ class Logger:
 
 
     def load_checkpoint(self, checkpoint_path):
+        if not self.saver:
+            self.saver = tf.train.Saver(max_to_keep=2)
         self.log(f"Loading model from {checkpoint_path}...")
         self.saver.restore(self.sess, checkpoint_path)
         global_step = self.sess.run(self.sess.graph.global_step_tensor)
