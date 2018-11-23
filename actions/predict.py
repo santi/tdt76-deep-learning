@@ -58,8 +58,10 @@ class Predictor(Action):
             while counter < 20: # TODO: change to 100
                 note = np.reshape(notes[-1], (1, 1, CONST['NOTE_LENGTH']))
                 logits, state = self.sess.run(
-                    [self.model.outputs,
-                    self.model.output_state],
+                    [
+                        self.model.outputs,
+                        self.model.output_state
+                    ],
                     feed_dict={
                         self.model.X: note,
                         self.model.initial_cell_state: state.c,

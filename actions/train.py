@@ -82,12 +82,12 @@ class Trainer(Action):
             self.save_model()
 
 
-        global_step, epoch, summaries, logits = self.sess.run(
+        global_step, epoch, summaries, outputs = self.sess.run(
                 [
                     self.model.global_step_tensor,
                     self.model.cur_epoch_tensor,
                     self.model.summaries,
-                    self.model.logits,
+                    self.model.outputs,
                 ],
                 feed_dict={
                     self.model.X: batch_features[-1],
@@ -95,7 +95,7 @@ class Trainer(Action):
                     self.model.initial_hidden_state: initial_state,
                     self.model.initial_cell_state: initial_state,
                 })
-        self.print_note(logits[0][0][50:90])
+        self.print_note(outputs[0][0][50:90])
         self.print_note(batch_labels[-1][0][0][50:90])
 
         self.logger.log(f'Finished epoch {epoch}. Global step {global_step}. Total validation loss: {total_loss}')
