@@ -3,7 +3,7 @@ import numpy as np
 import os
 from .action import Action
 from utils.constants import CONST
-from utils.datapreparation import visualize_piano_roll, load_all_dataset
+from utils.datapreparation import visualize_piano_roll, load_all_dataset, piano_roll_to_mid_file
 
 
 class Predictor(Action):
@@ -55,7 +55,7 @@ class Predictor(Action):
                     notes.append(note)
 
             
-            while counter < 20: # TODO: change to 100
+            while counter <= 100:
                 note = np.reshape(notes[-1], (1, 1, CONST['NOTE_LENGTH']))
                 logits, state = self.sess.run(
                     [
@@ -70,11 +70,18 @@ class Predictor(Action):
                 notes.append(np.reshape(logits, (128,)))
                 counter += 1
             
-            notes = np.array(notes)
+            notes = np.array(notes[1:])
+            predicted_notes = notes > 0.2
+            notes = np.zeros_like(notes)
+            notes[predicted_notes] = 1
+
             print(f'output notes shape: {notes.shape}')
-            for note in notes:
-                print(note[50:90])
+            #for note in notes:
+                #print(note[50:90])
             visualize_piano_roll(notes)
+            predicted_songs.append(notes * 100)
+        for i, song in enumerate(predicted_songs):
+            piano_roll_to_mid_file(song, f"{os.path.join(self.args.output_dir, self.args.model_name)}/song-{i}.mid", fs=5)
 
     def load_model(self):
         latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.args.checkpoint_dir, self.args.model_name))

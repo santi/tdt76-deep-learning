@@ -33,6 +33,10 @@ def piano_roll_to_pretty_midi(piano_roll, fs=100, program=2):
         the piano roll.
 
     '''
+    print(piano_roll.shape)
+    if(piano_roll.shape[0] != 128):
+        print('flipping matrix')
+        piano_roll = piano_roll.T
     notes, frames = piano_roll.shape
     pm = pretty_midi.PrettyMIDI()
     instrument = pretty_midi.Instrument(program=program)

@@ -24,6 +24,11 @@ def parse_args():
                         default='log/',
                         help='log summary directory')
 
+    parser.add_argument('--output_dir',
+                        type=str,
+                        default='output/',
+                        help='output directory')
+
     parser.add_argument('--model_name',
                         type=str,
                         default='model',

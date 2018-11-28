@@ -14,7 +14,7 @@ from models.lstm import VanillaLSTM as Model
 
 def main():
     args = parse_args()
-    create_dirs([args.checkpoint_dir, args.log_dir])
+    create_dirs([args.checkpoint_dir, args.log_dir, args.output_dir + args.model_name])
 
     sess = tf.Session()
 
