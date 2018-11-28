@@ -11,9 +11,7 @@ class Trainer(Action):
     def __init__(self, sess, model, reader, args, logger):
         super().__init__(sess, model, reader, args, logger)
 
-        self.best_validation = sys.float_info.max
         self.load_model()
-
         self.logger.log('============Trainer initialized============')
 
 
@@ -55,6 +53,8 @@ class Trainer(Action):
             self.logger.log('Initializing new model')
             self.sess.run(tf.global_variables_initializer())
             self.logger.log('New model initialized')
+        self.best_validation = self.sess.run(self.model.validation_score)
+        self.logger.log(f"Best validation score: {self.best_validation}")
 
 
     def print_note(self, logits):
@@ -64,7 +64,7 @@ class Trainer(Action):
 
     def validate(self):
         total_loss = 0.
-        batch_features, batch_labels = self.reader.get_iterator()
+        batch_features, batch_labels = self.reader.get_iterator('validation')
 
         initial_state = np.zeros((self.args.batch_size, CONST['LSTM_SIZE']))
         for i in range(len(batch_features)):
@@ -79,7 +79,11 @@ class Trainer(Action):
 
         if total_loss < self.best_validation:
             self.best_validation = total_loss
+            self.sess.run(self.model.assign_validation_score, feed_dict={
+                self.model.set_validation_score: total_loss,
+            })
             self.save_model()
+        
 
 
         global_step, epoch, summaries, outputs = self.sess.run(

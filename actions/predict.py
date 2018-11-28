@@ -15,49 +15,28 @@ class Predictor(Action):
     def predict(self):
         self.logger.log('Start generating songs...')
         features = self.reader.get_iterator(dataset='prediction')
-        print(f"predict feature shape: {features.shape}")
         predicted_songs = []
         for roll in features:
-            print(f"roll shape: {roll.shape}")
-            counter = 0
             notes = []
-            cell_state = np.zeros((1, CONST['LSTM_SIZE']))
-            hidden_state = np.zeros((1, CONST['LSTM_SIZE']))
-            state = (cell_state, hidden_state)
+            state = self._get_hidden_state()
 
-            first = True
             for note in roll:
-                print(f"note shape: {note.shape}")
                 reshaped_note = np.reshape(note, (1, 1, CONST['NOTE_LENGTH']))
-                print(f"note reshaped: {reshaped_note.shape}")
-                if first:
-                    first = False
-                    logits, state = self.sess.run(
-                        [self.model.outputs,
-                        self.model.output_state],
-                        feed_dict={
-                            self.model.X: reshaped_note,
-                            self.model.initial_hidden_state: state[0],
-                            self.model.initial_cell_state: state[1],
-                        })
-                    print(f"note output shape: {note.shape}")
-                    notes.append(note)
-                else:
-                    logits, state = self.sess.run(
-                        [self.model.outputs,
-                        self.model.output_state],
-                        feed_dict={
-                            self.model.X: reshaped_note,
-                            self.model.initial_cell_state: state.c,
-                            self.model.initial_hidden_state: state.h,
-                        })
-                    print(note.shape)
-                    notes.append(note)
+                state, _ = self.sess.run([
+                    self.model.output_state,
+                    self.model.outputs,
+                    ],
+                    feed_dict={
+                        self.model.X: reshaped_note,
+                        self.model.initial_cell_state: state.c,
+                        self.model.initial_hidden_state: state.h,
+                    })
+                notes.append(note) # Append the original note
 
-            
-            while counter <= 100:
+            end_signal = np.ones((128,))
+            while len(notes) < 100:
                 note = np.reshape(notes[-1], (1, 1, CONST['NOTE_LENGTH']))
-                logits, state = self.sess.run(
+                outputs, state = self.sess.run(
                     [
                         self.model.outputs,
                         self.model.output_state
@@ -67,21 +46,26 @@ class Predictor(Action):
                         self.model.initial_cell_state: state.c,
                         self.model.initial_hidden_state: state.h,
                     })
-                notes.append(np.reshape(logits, (128,)))
-                counter += 1
-            
-            notes = np.array(notes[1:])
-            predicted_notes = notes > 0.2
-            notes = np.zeros_like(notes)
-            notes[predicted_notes] = 1
 
-            print(f'output notes shape: {notes.shape}')
-            #for note in notes:
-                #print(note[50:90])
-            visualize_piano_roll(notes)
-            predicted_songs.append(notes * 100)
+                outputs = np.reshape(outputs, (128,))
+                predicted_note = outputs > CONST['NOTE_THRESHOLD']
+                outputs = np.zeros_like(outputs)
+                outputs[predicted_note] = 1
+
+                if np.array_equal(outputs, end_signal):
+                    break
+                
+                notes.append(outputs)
+
+            predicted_songs.append(np.array(notes) * 100)
+        self.logger.log('Finished generating songs')
+
+        self.logger.log('Saving songs...')
         for i, song in enumerate(predicted_songs):
+            self.logger.log(f'Saving song {i} shape: {song.shape}')
+            visualize_piano_roll(song, save=True, filename=f'song-{i}')
             piano_roll_to_mid_file(song, f"{os.path.join(self.args.output_dir, self.args.model_name)}/song-{i}.mid", fs=5)
+        self.logger.log('Finished saving songs')
 
     def load_model(self):
         latest_checkpoint = tf.train.latest_checkpoint(os.path.join(self.args.checkpoint_dir, self.args.model_name))
@@ -89,3 +73,26 @@ class Predictor(Action):
             self.logger.load_checkpoint(latest_checkpoint)
         else:
             raise NotImplementedError()
+
+    def _get_hidden_state(self):
+        cell_state = None
+        hidden_state = None
+        if self.args.composer:
+            composer = self.args.composer
+            filepath_hidden_state = f'{composer}_hidden_state.npy'
+            filepath_cell_state = f'{composer}_cell_state.npy'
+            self.logger.log(f'Loading composer initial hidden state from {filepath_hidden_state}')
+            self.logger.log(f'Loading composer initial cell state from {filepath_cell_state}')
+
+            hidden_state = np.reshape(np.load(filepath_hidden_state)[0], (1, CONST['LSTM_SIZE']))
+            cell_state = np.reshape(np.load(filepath_cell_state)[0], (1, CONST['LSTM_SIZE']))
+        else:
+            hidden_state = np.zeros((1, CONST['LSTM_SIZE']))
+            cell_state = np.zeros((1, CONST['LSTM_SIZE']))
+
+        class State:
+            def __init__(self):
+                self.c = cell_state
+                self.h = hidden_state
+        
+        return State()

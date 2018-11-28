@@ -8,7 +8,6 @@ import pypianoroll as pproll
 import sys
 import IPython
 import fluidsynth
-# import torch
 
 
 
@@ -33,9 +32,7 @@ def piano_roll_to_pretty_midi(piano_roll, fs=100, program=2):
         the piano roll.
 
     '''
-    print(piano_roll.shape)
     if(piano_roll.shape[0] != 128):
-        print('flipping matrix')
         piano_roll = piano_roll.T
     notes, frames = piano_roll.shape
     pm = pretty_midi.PrettyMIDI()
@@ -113,8 +110,7 @@ def load_all_dataset(dirpath,binarize=True):
         return [pd.read_csv(os.path.join(dirpath, file)).values for file in sorted(os.listdir(dirpath)) if file.endswith(".csv")]
 
 def load_all_dataset_names(dirpath):
-    """ given a diretory finds all the csv in the d
-iretory an split the first part
+    """ given a diretory finds all the csv in the diretory an split the first part
         of the name of the file to return as a tag for the associated numpy array
         input: path a diretory
         output: list of strings
@@ -138,17 +134,17 @@ def get_numkeys(dataset):
     """
     return np.unique([x.shape[0] for x in dataset])
 
-def visualize_piano_roll(pianoroll_matrix,fs=5):
+def visualize_piano_roll(pianoroll_matrix,fs=5, save=False, filename='song'):
     """ input: piano roll matrix with shape (number of notes, time steps)
         effect: generates a nice graph with the piano roll visualization
     """
     pianoroll_matrix = pianoroll_matrix.astype(float)
     if(pianoroll_matrix.shape[0]==128):
-        print('flipping matrix')
         pianoroll_matrix = pianoroll_matrix.T
     track = pproll.Track(pianoroll=pianoroll_matrix, program=0, is_drum=False, name='piano roll')   
     # Plot the piano-roll
     fig, ax = track.plot(beat_resolution=fs)
+    plt.savefig(f'output/model/{filename}.png')
     plt.show()
 
 def test_piano_roll(pianoroll_matrix,n_seconds,fs=5):

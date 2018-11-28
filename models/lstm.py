@@ -28,10 +28,16 @@ class VanillaLSTM(Model):
             self.sequence_length,
             CONST['NOTE_LENGTH']], name='X')
 
-        self.initial_hidden_state = tf.placeholder(
-            tf.float32, shape=[self.batch_size, CONST['LSTM_SIZE']], name='initial_hidden_state')
-        self.initial_cell_state = tf.placeholder(
-            tf.float32, shape=[self.batch_size, CONST['LSTM_SIZE']], name='initial_cell_state')
+        if self.args.action == 'train_composer':
+            self.initial_hidden_state = tf.get_variable(
+                'initial_hidden_state', shape=[self.batch_size, CONST['LSTM_SIZE']], dtype=tf.float32, trainable=True)
+            self.initial_cell_state = tf.get_variable(
+                'initial_cell_state', shape=[self.batch_size, CONST['LSTM_SIZE']], dtype=tf.float32, trainable=True)
+        else:
+            self.initial_hidden_state = tf.placeholder(
+                tf.float32, shape=[self.batch_size, CONST['LSTM_SIZE']], name='initial_hidden_state')
+            self.initial_cell_state = tf.placeholder(
+                tf.float32, shape=[self.batch_size, CONST['LSTM_SIZE']], name='initial_cell_state')
 
         with tf.variable_scope('lstm_cell'):
             cell = tf.nn.rnn_cell.LSTMCell(num_units=CONST['LSTM_SIZE'])
@@ -68,14 +74,9 @@ class VanillaLSTM(Model):
         print(f"Y: {self.Y.shape}")
         
         with tf.variable_scope('loss'):
-            self.loss = tf.losses.mean_squared_error(
-                self.Y, self.outputs, weights=100)
+            self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                labels=self.Y, logits=self.logits))
             self.loss_summary = tf.summary.scalar('sigmoid_mean_loss', self.loss)
-        """
-        self.probabilities = tf.nn.softmax(self.logits)
-        correct_prediction = tf.equal(tf.argmax(self.logits, 1), self.labels)
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        """
 
         with tf.variable_scope('optimizer'):
             self.optimizer = tf.train.AdamOptimizer()

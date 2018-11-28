@@ -37,7 +37,11 @@ def parse_args():
     parser.add_argument('--action',
                         type=str,
                         default='train',
-                        choices=['train', 'predict'])
+                        choices=['train', 'predict', 'train_composer'])
+
+    parser.add_argument('--composer',
+                        type=str,
+                        choices=['mz', 'bach', 'brahms', 'debussy'])
 
     parser.add_argument('--training_data',
                         type=str,
@@ -45,14 +49,15 @@ def parse_args():
 
     parser.add_argument('--validation_data',
                         type=str,
-                        default='data/valid_TA_split.csv')
+                        default='data/validation/piano_roll_fs1/')
 
     parser.add_argument('--prediction_data',
                         type=str,
-                        default='data/training/piano_roll_fs1_subset/')
+                        default='data/predicting/piano_roll_fs1/')
 
     parser.add_argument('--debug',
                         type=bool,
                         default=True)
+    
 
     return parser.parse_args()

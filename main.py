@@ -8,6 +8,7 @@ from utils.dirs import create_dirs
 from utils.logger import Logger
 from utils.data_loader import Reader
 from actions.train import Trainer
+from actions.train_composer import ComposerTrainer
 from actions.predict import Predictor
 from models.lstm import VanillaLSTM as Model
 
@@ -25,9 +26,14 @@ def main():
     if args.action == 'train':
         trainer = Trainer(sess, model, reader, args, logger)
         trainer.train()
-    else:
+    elif args.action == 'train_composer':
+        trainer = ComposerTrainer(sess, model, reader, args, logger)
+        trainer.train()
+    elif args.action == 'predict':
         predictor = Predictor(sess, model, reader, args, logger)
         predictor.predict()
+    else:
+        raise ValueError('Invalid action argument')
 
 
 main()

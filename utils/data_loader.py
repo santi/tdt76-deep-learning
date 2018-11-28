@@ -19,16 +19,43 @@ class Reader():
 
         self.logger.log('============Preparing datasets============')
 
+
         training_data = self._load_data(self.args.training_data)
+        validation_data = self._load_data(self.args.validation_data)
         prediction_data = self._load_data(self.args.prediction_data)
 
-        #test_roll = piano_rolls[0].T
-        #visualize_piano_roll(test_roll)
-        #print(test_roll[1])
+        self.training_data_x, self.training_data_y = self.generate_samples(training_data)
+        self.validation_data_x, self.validation_data_y = self.generate_samples(validation_data)
 
-        self.features_dataset = []
-        self.labels_dataset = []
-        for roll in training_data:
+        # prediction data
+        prediction_features = []
+        for roll in prediction_data:
+            features = roll.T[1:]
+            prediction_features.append(features)
+        
+        self.prediction_features = np.array(prediction_features)
+
+        self.logger.log(f'Training data: {self.training_data_x.shape}')
+        self.logger.log(f'Validation data: {self.validation_data_x.shape}')
+        self.logger.log(f'Prediction data: {self.prediction_features.shape}')
+        self.logger.log('============Datasets prepared============')
+
+
+    def get_iterator(self, dataset='training'):
+        if dataset == 'training':
+            return self._shuffle_and_batch(self.training_data_x, self.training_data_y)
+        if dataset == 'validation':
+            return self._shuffle_and_batch(self.validation_data_x, self.validation_data_y)
+        elif dataset == 'prediction':
+            return self.prediction_features
+        else:
+            raise NotImplementedError('Must get training, validation or prediction data')
+
+    def generate_samples(self, data):
+
+        features_dataset = []
+        labels_dataset = []
+        for roll in data:
             features = roll.T
             labels = features[1:]
             labels = np.append(labels, [np.ones_like(labels[0])], axis=0)
@@ -36,32 +63,14 @@ class Reader():
             assert features.shape == labels.shape
             
             for i in range(len(features) - CONST['SEQUENCE_LENGTH']):
-                self.features_dataset.append(features[i: i + CONST['SEQUENCE_LENGTH']])
-                self.labels_dataset.append(labels[i: i + CONST['SEQUENCE_LENGTH']])
+                features_dataset.append(features[i: i + CONST['SEQUENCE_LENGTH']])
+                labels_dataset.append(labels[i: i + CONST['SEQUENCE_LENGTH']])
 
 
-        self.features_dataset = np.array(self.features_dataset)
-        self.labels_dataset = np.array(self.labels_dataset)
+        features_dataset = np.array(features_dataset)
+        labels_dataset = np.array(labels_dataset)
 
-        # prediction data
-        prediction_features = []
-        for roll in prediction_data:
-            features = roll.T[:5]
-            prediction_features.append(features)
-        
-        self.prediction_features = np.array(prediction_features)
-
-
-        self.logger.log('============Datasets prepared============')
-
-
-    def get_iterator(self, dataset='training'):
-        if dataset == 'training':
-            return self._shuffle_and_batch(self.features_dataset, self.labels_dataset)
-        elif dataset == 'prediction':
-            return self.prediction_features
-        else:
-            raise NotImplementedError('must get trainign or prediction data')
+        return (features_dataset, labels_dataset)
 
 
     def _shuffle_and_batch(self, a, b):
@@ -93,4 +102,3 @@ class Reader():
         data = load_all_dataset(filepath)
         self.logger.log('Data loaded.')
         return data
-
