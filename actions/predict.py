@@ -16,9 +16,10 @@ class Predictor(Action):
         self.logger.log('Start generating songs...')
         features = self.reader.get_iterator(dataset='prediction')
         predicted_songs = []
+        initial_state = self._get_hidden_state()
         for roll in features:
             notes = []
-            state = self._get_hidden_state()
+            state = initial_state
 
             for note in roll:
                 reshaped_note = np.reshape(note, (1, 1, CONST['NOTE_LENGTH']))
